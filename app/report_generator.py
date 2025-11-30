@@ -77,7 +77,7 @@ class ReportGeneratorGruppoDelPesce:
 
         # Crea figura con layout complesso
         fig = plt.figure(figsize=(20, 14))
-        fig.suptitle('🐠 REPORT SIMULAZIONE PRODUZIONE - GRUPPO DEL PESCE',
+        fig.suptitle(' REPORT SIMULAZIONE PRODUZIONE - GRUPPO DEL PESCE',
                      fontsize=20, fontweight='bold', y=0.98)
 
         # Sottotitolo
@@ -139,10 +139,10 @@ class ReportGeneratorGruppoDelPesce:
         tasso_sopravvivenza = (totale_pesci / totale_larve * 100)
 
         kpis = [
-            ('🐟 LARVE SEMINATE', f'{totale_larve:,}', 'larve'),
-            ('🎣 PESCI COMMERCIALI', f'{totale_pesci:,}', 'pesci'),
-            ('⚖️ TONNELLATE', f'{totale_tonnellate:.2f} t', ''),
-            ('📈 SOPRAVVIVENZA', f'{tasso_sopravvivenza:.1f}%', 'totale')
+            (' LARVE SEMINATE', f'{totale_larve:,}', 'larve'),
+            (' PESCI COMMERCIALI', f'{totale_pesci:,}', 'pesci'),
+            (' TONNELLATE', f'{totale_tonnellate:.2f} t', ''),
+            (' SOPRAVVIVENZA', f'{tasso_sopravvivenza:.1f}%', 'totale')
         ]
 
         # Disegna KPI cards
@@ -197,7 +197,7 @@ class ReportGeneratorGruppoDelPesce:
         percentuale = (risparmio / risultati_seq['tempo_totale'] * 100)
 
         ax.set_ylabel('Giorni', fontweight='bold')
-        ax.set_title('⏱️ Confronto Tempi Produttivi', fontweight='bold', pad=15)
+        ax.set_title(' Confronto Tempi Produttivi', fontweight='bold', pad=15)
         ax.grid(axis='y', alpha=0.3)
 
         # Aggiungi testo risparmio
@@ -227,7 +227,7 @@ class ReportGeneratorGruppoDelPesce:
             text.set_fontsize(9)
             text.set_fontweight('bold')
 
-        ax.set_title('🐟 Distribuzione Produzione per Specie', fontweight='bold', pad=15)
+        ax.set_title(' Distribuzione Produzione per Specie', fontweight='bold', pad=15)
 
     def _crea_grafico_sopravvivenza(self, ax, risultati):
         """Crea grafico a barre per tassi di sopravvivenza"""
@@ -248,7 +248,7 @@ class ReportGeneratorGruppoDelPesce:
                    bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
 
         ax.set_xlabel('Tasso di Sopravvivenza (%)', fontweight='bold')
-        ax.set_title('📈 Tasso di Sopravvivenza Totale', fontweight='bold', pad=15)
+        ax.set_title(' Tasso di Sopravvivenza Totale', fontweight='bold', pad=15)
         ax.set_xlim(0, 100)
         ax.grid(axis='x', alpha=0.3)
 
@@ -284,7 +284,7 @@ class ReportGeneratorGruppoDelPesce:
         ax.set_yticks(y_pos)
         ax.set_yticklabels([''] * len(dettagli))
         ax.set_xlabel('Giorni', fontweight='bold')
-        ax.set_title('📅 Timeline Produttiva (Metodo Sovrapposto)', fontweight='bold', pad=15)
+        ax.set_title(' Timeline Produttiva (Metodo Sovrapposto)', fontweight='bold', pad=15)
         ax.legend(loc='upper right', framealpha=0.9)
         ax.grid(axis='x', alpha=0.3)
 
@@ -311,7 +311,7 @@ class ReportGeneratorGruppoDelPesce:
                   color=colors_specie[i], alpha=0.8, edgecolor='black', linewidth=1)
 
         ax.set_ylabel('Numero Unità', fontweight='bold')
-        ax.set_title('🏭 Risorse Utilizzate', fontweight='bold', pad=15)
+        ax.set_title(' Risorse Utilizzate', fontweight='bold', pad=15)
         ax.set_xticks(x)
         ax.set_xticklabels(categorie, fontsize=8)
         ax.legend(loc='upper left', fontsize=8)
@@ -386,7 +386,7 @@ class ReportGeneratorGruppoDelPesce:
                 if i % 2 == 0:
                     cell.set_facecolor('#f0f0f0')
 
-        ax.set_title('📊 Tabella Comparativa Dettagliata', fontweight='bold',
+        ax.set_title(' Tabella Comparativa Dettagliata', fontweight='bold',
                     fontsize=12, pad=20)
 
     def _crea_grafico_produzione_annuale(self, ax, risultati):
@@ -411,7 +411,7 @@ class ReportGeneratorGruppoDelPesce:
                    ha='center', va='bottom', fontweight='bold', fontsize=11)
 
         ax.set_ylabel('Tonnellate/Anno', fontweight='bold')
-        ax.set_title('📈 Produzione Annuale Stimata', fontweight='bold', pad=15)
+        ax.set_title(' Produzione Annuale Stimata', fontweight='bold', pad=15)
         ax.grid(axis='y', alpha=0.3)
 
         # Percentuale raggiungimento

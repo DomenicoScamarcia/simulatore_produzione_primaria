@@ -264,19 +264,19 @@ def stampa_risultati(risultati: Dict):
     print(f"{'='*80}")
 
     for dettaglio in risultati['dettagli']:
-        print(f"\n🐟 Specie: {dettaglio['specie']}")
-        print(f"   📊 NUMERI:")
+        print(f"\n Specie: {dettaglio['specie']}")
+        print(f"    NUMERI:")
         print(f"      Larve seminate: {dettaglio['larve_seminate']:,} larve")
         print(f"      Avannotti prodotti (2g): {dettaglio['avannotti_2g']:,}")
         print(f"      Pesci commerciali: {dettaglio['pesci_commerciali']:,}")
         print(f"      Tonnellate prodotte: {dettaglio['tonnellate_prodotte']} t")
 
-        print(f"\n   🏭 RISORSE UTILIZZATE:")
+        print(f"\n    RISORSE UTILIZZATE:")
         print(f"      Vasche larvali: {dettaglio['vasche_larvali']}")
         print(f"      Vasche preingrasso: {dettaglio['vasche_preingrasso']}")
         print(f"      Gabbie ingrasso: {dettaglio['gabbie_ingrasso']}")
 
-        print(f"\n   ⏱️  TEMPI:")
+        print(f"\n     TEMPI:")
         if 'inizio_giorno' in dettaglio:
             print(f"      Inizio ciclo: giorno {dettaglio['inizio_giorno']}")
             print(f"      Fine larvale: giorno {dettaglio['fine_larvale_giorno']} ({dettaglio['giorni_larvali']}gg)")
@@ -288,16 +288,16 @@ def stampa_risultati(risultati: Dict):
             print(f"      Fase ingrasso: {dettaglio['giorni_ingrasso']} giorni")
             print(f"      Tempo totale: {dettaglio['giorni_totali']} giorni")
 
-        print(f"\n   📈 PERFORMANCE:")
+        print(f"\n    PERFORMANCE:")
         print(f"      Tasso sopravvivenza totale: {dettaglio['tasso_sopravvivenza_totale']}%")
 
     print(f"\n{'='*80}")
-    print(f"⏱️  TEMPO TOTALE CICLO PRODUTTIVO: {risultati['tempo_totale']} giorni")
+    print(f"️  TEMPO TOTALE CICLO PRODUTTIVO: {risultati['tempo_totale']} giorni")
 
     # Calcola produzione totale
     tot_tonnellate = sum(d['tonnellate_prodotte'] for d in risultati['dettagli'])
     tot_pesci = sum(d['pesci_commerciali'] for d in risultati['dettagli'])
-    print(f"🐟 PRODUZIONE TOTALE: {tot_tonnellate:.2f} tonnellate ({tot_pesci:,} pesci)")
+    print(f" PRODUZIONE TOTALE: {tot_tonnellate:.2f} tonnellate ({tot_pesci:,} pesci)")
     print(f"{'='*80}\n")
 
 # ============================================================================
@@ -308,7 +308,7 @@ def main():
     """Funzione principale che esegue la simulazione"""
 
     print("\n" + "="*80)
-    print("🐠 SIMULAZIONE PRODUZIONE - GRUPPO DEL PESCE")
+    print(" SIMULAZIONE PRODUZIONE - GRUPPO DEL PESCE")
     print("   Filiera integrata: dalla nascita alla taglia commerciale")
     print("   Sede: Guidonia (RM) - 6 impianti produttivi in Italia")
     print("="*80)
@@ -356,37 +356,37 @@ def main():
     # Configura il gruppo produttivo
     config = ConfigurazioneGruppoDelPesce()
 
-    print(f"\n📋 CONFIGURAZIONE GRUPPO DEL PESCE:")
-    print(f"\n   🏭 AVANNOTTERIA (Riproduzione):")
+    print(f"\n CONFIGURAZIONE GRUPPO DEL PESCE:")
+    print(f"\n    AVANNOTTERIA (Riproduzione):")
     print(f"      - Vasche larvali piccole (2-5mc): {config.vasche_larvali_piccole}")
     print(f"      - Vasche larvali medie (10mc): {config.vasche_larvali_medie}")
     print(f"      - Vasche larvali grandi (20mc): {config.vasche_larvali_grandi}")
     print(f"      - Vasche preingrasso (40mc): {config.vasche_preingrasso}")
 
-    print(f"\n   🌊 IMPIANTI PRODUTTIVI:")
+    print(f"\n    IMPIANTI PRODUTTIVI:")
     print(f"      - Numero impianti: {config.numero_impianti}")
     print(f"      - Gabbie per impianto: {config.gabbie_per_impianto}")
     print(f"      - Volume gabbia: {config.volume_gabbia} mc")
     print(f"      - Impianto terra Orbetello: {config.vasche_terra_orbetello} vasche da {config.volume_vasca_terra} mc")
 
-    print(f"\n   📊 CAPACITÀ E PARAMETRI:")
+    print(f"\n    CAPACITÀ E PARAMETRI:")
     print(f"      - Capacità produttiva annua: {config.capacita_produttiva_annua:,} tonnellate/anno")
     print(f"      - Sopravvivenza larvale: {config.tasso_sopravvivenza_larvale*100}%")
     print(f"      - Sopravvivenza preingrasso: {config.tasso_sopravvivenza_preingrasso*100}%")
     print(f"      - Sopravvivenza ingrasso: {config.tasso_sopravvivenza_ingrasso*100}%")
     print(f"      - Efficienza operativa: {config.efficienza_operativa*100}%")
 
-    print(f"\n   ✅ CERTIFICAZIONI:")
+    print(f"\n    CERTIFICAZIONI:")
     for cert in config.certificazioni:
         print(f"      - {cert}")
 
     # Genera lotti casuali
-    print("\n🎲 Generazione lotti di produzione...")
+    print("\n Generazione lotti di produzione...")
     lotti = genera_lotti_casuali(specie_ittiche,
                                 min_larve=1200000,
                                 max_larve=2500000)
 
-    print("\n📦 Lotti generati:")
+    print("\n Lotti generati:")
     for lotto in lotti:
         print(f"   - {lotto.specie.nome}")
         print(f"     Larve da seminare: {lotto.numero_larve:,} larve")
@@ -407,11 +407,11 @@ def main():
         nome_file="report_produzione.png"
     )
 
-    print(f"✅ Report generato: {file_png}")
+    print(f" Report generato: {file_png}")
 
     # Confronto finale
     print("\n" + "="*80)
-    print("📊 CONFRONTO TRA METODI DI GESTIONE PRODUTTIVA")
+    print(" CONFRONTO TRA METODI DI GESTIONE PRODUTTIVA")
     print("="*80)
     print(f"Metodo Sequenziale: {risultati_seq['tempo_totale']} giorni")
     print(f"Metodo Integrato Sovrapposto: {risultati_sov['tempo_totale']} giorni")
@@ -419,14 +419,14 @@ def main():
     differenza = risultati_seq['tempo_totale'] - risultati_sov['tempo_totale']
     if differenza > 0:
         percentuale = (differenza / risultati_seq['tempo_totale']) * 100
-        print(f"\n💡 RISPARMIO con metodo integrato: {differenza} giorni ({percentuale:.1f}%)")
+        print(f"\n RISPARMIO con metodo integrato: {differenza} giorni ({percentuale:.1f}%)")
         print(f"   ✓ Ottimizzazione uso avannotteria")
         print(f"   ✓ Distribuzione efficiente su 6 impianti")
         print(f"   ✓ Maggiore flessibilità produttiva")
 
     # Analisi produzione
     tot_tonnellate_seq = sum(d['tonnellate_prodotte'] for d in risultati_seq['dettagli'])
-    print(f"\n🐟 PRODUZIONE ANNUALE STIMATA:")
+    print(f"\n PRODUZIONE ANNUALE STIMATA:")
     print(f"   Tonnellate per ciclo: {tot_tonnellate_seq:.2f} t")
     cicli_anno = 365 / risultati_sov['tempo_totale']
     produzione_annua = tot_tonnellate_seq * cicli_anno
@@ -438,7 +438,7 @@ def main():
     print(f"   Raggiungimento target: {percentuale_target:.1f}%")
 
     print("\n" + "="*80)
-    print("🌊 100% ITALIANO DALLA NASCITA - Filiera completamente integrata")
+    print(" 100% ITALIANO DALLA NASCITA - Filiera completamente integrata")
     print("="*80 + "\n")
 
 # Esegui il programma
