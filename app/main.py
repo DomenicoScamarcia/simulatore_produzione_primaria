@@ -3,118 +3,16 @@ SIMULAZIONE PROCESSO PRODUTTIVO - GRUPPO DEL PESCE
 Avannotteria integrata: produzione di avannotti di spigola, orata e ombrina
 Sistema completo dalla nascita alla taglia commerciale
 """
-import random
 from typing import List, Dict
-
 from app.report_generator import ReportGeneratorGruppoDelPesce
-from config import settings
 from data_model.lotto_produzione_model import LottoProduzione
 from data_model.specie_ittica_model import SpecieIttica
-
-
-class ConfigurazioneGruppoDelPesce:
-
-    def __init__(self):
-        # ===== AVANNOTTERIA (Riproduzione) =====
-        # Vasche larvali
-        self.vasche_larvali_piccole = settings.VASCHE_LARVALI_PICCOLE
-        self.vasche_larvali_medie = settings.VASCHE_LARVALI_MEDIE
-        self.vasche_larvali_grandi = settings.VASCHE_LARVALI_GRANDI
-
-        # Vasche preingrasso (fino a 2g)
-        self.vasche_preingrasso = settings.VASCHE_PREINGRASSO
-
-        # ===== IMPIANTI DI INGRASSO (6 siti produttivi) =====
-        self.numero_impianti = settings.NUMERO_IMPIANTI
-
-        # Gabbie in mare (per la maggior parte degli impianti)
-        self.gabbie_per_impianto = settings.GABBIE_PER_IMPIANTO
-        self.volume_gabbia = settings.VOLUME_GABBIA
-
-        # Impianto a terra Orbetello (capacità maggiore)
-        self.vasche_terra_orbetello = settings.VASCHE_TERRA_ORBETELLO
-        self.volume_vasca_terra = settings.VOLUME_VASCA_TERRA
-
-        # ===== PARAMETRI PRODUTTIVI =====
-        self.tasso_sopravvivenza_larvale = settings.TASSO_SOPRAVVIVENZA_LARVALE
-        self.tasso_sopravvivenza_preingrasso = settings.TASSO_SOPRAVVIVENZA_PREINGRASSO
-        self.tasso_sopravvivenza_ingrasso = settings.TASSO_SOPRAVVIVENZA_INGRASSO
-        self.efficienza_operativa = settings.EFFICIENZA_OPERATIVA
-
-        # Capacità produttiva annua (tonnellate)
-        self.capacita_produttiva_annua = settings.CAPACITA_PRODUTTIVA_ANNUA
-
-        # ===== CERTIFICAZIONI =====
-        self.certificazioni = ["Global GAP", "Antibiotic Free", "IFS Food"]
-
-    def imposta_sopravvivenza(self, larvale: float, preingrasso: float, ingrasso: float):
-        """Configura i tassi di sopravvivenza per ogni fase"""
-        self.tasso_sopravvivenza_larvale = max(0.0, min(1.0, larvale))
-        self.tasso_sopravvivenza_preingrasso = max(0.0, min(1.0, preingrasso))
-        self.tasso_sopravvivenza_ingrasso = max(0.0, min(1.0, ingrasso))
+from utils.calcolo_vasche import calcola_vasche_larvali, calcola_gabbie_ingrasso, calcola_vasche_preingrasso
+from utils.configurazione import ConfigurazioneGruppoDelPesce
+from utils.generazione_lotti import genera_lotti_casuali
 
 # ============================================================================
-# 3. GENERAZIONE DATI - Quantità casuali da produrre
-# ============================================================================
-
-def genera_lotti_casuali(specie_disponibili: List[SpecieIttica], min_larve: int = 1000000, max_larve: int = 3000000) -> List[LottoProduzione]:
-    """
-    Genera lotti di produzione con quantità casuali di larve
-
-    Args:
-        specie_disponibili: Lista di specie ittiche disponibili
-        min_larve: Numero minimo di larve da seminare
-        max_larve: Numero massimo di larve da seminare
-
-    Returns:
-        Lista di lotti di produzione con quantità casuali
-    """
-    lotti = []
-    for specie in specie_disponibili:
-        numero_larve = random.randint(min_larve, max_larve)
-        lotti.append(LottoProduzione(specie, numero_larve))
-    return lotti
-
-# ============================================================================
-# 4. CALCOLI PRODUTTIVI - Funzioni di supporto
-# ============================================================================
-
-def calcola_vasche_larvali(lotto: LottoProduzione, config: ConfigurazioneGruppoDelPesce) -> int:
-    """Calcola il numero di vasche larvali necessarie"""
-    densita = lotto.specie.densita_semina_larvale
-
-    # Usa un mix di vasche (piccole, medie, grandi)
-    capacita_media = 8000  # litri (media tra i vari tipi)
-    vasche_totali = config.vasche_larvali_piccole + config.vasche_larvali_medie + config.vasche_larvali_grandi
-
-    larve_per_vasca = capacita_media * densita
-    vasche_necessarie = int(lotto.numero_larve / larve_per_vasca) + 1
-
-    return min(vasche_necessarie, vasche_totali)
-
-def calcola_vasche_preingrasso(post_larve: int, config: ConfigurazioneGruppoDelPesce) -> int:
-    """Calcola vasche necessarie per il preingrasso"""
-    capacita_vasca = 40000  # litri
-    densita = 400  # avannotti per mc (ridotta per benessere)
-
-    post_larve_per_vasca = (capacita_vasca / 1000) * densita
-    vasche_necessarie = int(post_larve / post_larve_per_vasca) + 1
-
-    return min(vasche_necessarie, config.vasche_preingrasso)
-
-def calcola_gabbie_ingrasso(avannotti: int, specie: SpecieIttica, config: ConfigurazioneGruppoDelPesce) -> int:
-    """Calcola gabbie necessarie per fase di ingrasso fino a taglia commerciale"""
-    densita = specie.densita_ingrasso
-    volume_gabbia = config.volume_gabbia
-
-    pesci_per_gabbia = volume_gabbia * densita
-    gabbie_necessarie = int(avannotti / pesci_per_gabbia) + 1
-
-    gabbie_totali_disponibili = config.gabbie_per_impianto * config.numero_impianti
-    return min(gabbie_necessarie, gabbie_totali_disponibili)
-
-# ============================================================================
-# 5. SEQUENZE PRODUTTIVE
+# SEQUENZE PRODUTTIVE
 # ============================================================================
 
 def sequenza_produzione_completa_sequenziale(lotti: List[LottoProduzione], config: ConfigurazioneGruppoDelPesce) -> Dict:
@@ -376,15 +274,10 @@ def main():
     print(f"      - Sopravvivenza ingrasso: {config.tasso_sopravvivenza_ingrasso*100}%")
     print(f"      - Efficienza operativa: {config.efficienza_operativa*100}%")
 
-    print(f"\n    CERTIFICAZIONI:")
-    for cert in config.certificazioni:
-        print(f"      - {cert}")
 
     # Genera lotti casuali
     print("\n Generazione lotti di produzione...")
-    lotti = genera_lotti_casuali(specie_ittiche,
-                                min_larve=1200000,
-                                max_larve=2500000)
+    lotti = genera_lotti_casuali(specie_ittiche, min_larve=1000000, max_larve=2500000)
 
     print("\n Lotti generati:")
     for lotto in lotti:

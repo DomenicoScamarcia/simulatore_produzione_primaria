@@ -30,7 +30,4 @@ class Configuration(BaseSettings):
     # Capacità produttiva annua (tonnellate)
     CAPACITA_PRODUTTIVA_ANNUA: int = 4500  # tonnellate/anno
 
-    # ===== CERTIFICAZIONI =====
-    CERTIFICAZIONI: list[str] = ["Global GAP", "Antibiotic Free", "IFS Food"]
-
 settings = Configuration()
