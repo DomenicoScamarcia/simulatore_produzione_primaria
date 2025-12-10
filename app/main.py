@@ -3,126 +3,25 @@ SIMULAZIONE PROCESSO PRODUTTIVO - GRUPPO DEL PESCE
 Avannotteria integrata: produzione di avannotti di spigola, orata e ombrina
 Sistema completo dalla nascita alla taglia commerciale
 """
-import random
 from typing import List, Dict
-
 from app.report_generator import ReportGeneratorGruppoDelPesce
-from config import settings
 from data_model.lotto_produzione_model import LottoProduzione
 from data_model.specie_ittica_model import SpecieIttica
-
-
-class ConfigurazioneGruppoDelPesce:
-
-    def __init__(self):
-        # ===== AVANNOTTERIA (Riproduzione) =====
-        # Vasche larvali
-        self.vasche_larvali_piccole = settings.VASCHE_LARVALI_PICCOLE
-        self.vasche_larvali_medie = settings.VASCHE_LARVALI_MEDIE
-        self.vasche_larvali_grandi = settings.VASCHE_LARVALI_GRANDI
-
-        # Vasche preingrasso (fino a 2g)
-        self.vasche_preingrasso = settings.VASCHE_PREINGRASSO
-
-        # ===== IMPIANTI DI INGRASSO (6 siti produttivi) =====
-        self.numero_impianti = settings.NUMERO_IMPIANTI
-
-        # Gabbie in mare (per la maggior parte degli impianti)
-        self.gabbie_per_impianto = settings.GABBIE_PER_IMPIANTO
-        self.volume_gabbia = settings.VOLUME_GABBIA
-
-        # Impianto a terra Orbetello (capacità maggiore)
-        self.vasche_terra_orbetello = settings.VASCHE_TERRA_ORBETELLO
-        self.volume_vasca_terra = settings.VOLUME_VASCA_TERRA
-
-        # ===== PARAMETRI PRODUTTIVI =====
-        self.tasso_sopravvivenza_larvale = settings.TASSO_SOPRAVVIVENZA_LARVALE
-        self.tasso_sopravvivenza_preingrasso = settings.TASSO_SOPRAVVIVENZA_PREINGRASSO
-        self.tasso_sopravvivenza_ingrasso = settings.TASSO_SOPRAVVIVENZA_INGRASSO
-        self.efficienza_operativa = settings.EFFICIENZA_OPERATIVA
-
-        # Capacità produttiva annua (tonnellate)
-        self.capacita_produttiva_annua = settings.CAPACITA_PRODUTTIVA_ANNUA
-
-        # ===== CERTIFICAZIONI =====
-        self.certificazioni = ["Global GAP", "Antibiotic Free", "IFS Food"]
-
-    def imposta_sopravvivenza(self, larvale: float, preingrasso: float, ingrasso: float):
-        """Configura i tassi di sopravvivenza per ogni fase"""
-        self.tasso_sopravvivenza_larvale = max(0.0, min(1.0, larvale))
-        self.tasso_sopravvivenza_preingrasso = max(0.0, min(1.0, preingrasso))
-        self.tasso_sopravvivenza_ingrasso = max(0.0, min(1.0, ingrasso))
+from utils.calcolo_vasche import calcola_vasche_larvali, calcola_gabbie_ingrasso, calcola_vasche_preingrasso
+from utils.configurazione import ConfigurazioneGruppoDelPesce
+from utils.generazione_lotti import genera_lotti_casuali
 
 # ============================================================================
-# 3. GENERAZIONE DATI - Quantità casuali da produrre
-# ============================================================================
-
-def genera_lotti_casuali(specie_disponibili: List[SpecieIttica], min_larve: int = 1000000, max_larve: int = 3000000) -> List[LottoProduzione]:
-    """
-    Genera lotti di produzione con quantità casuali di larve
-
-    Args:
-        specie_disponibili: Lista di specie ittiche disponibili
-        min_larve: Numero minimo di larve da seminare
-        max_larve: Numero massimo di larve da seminare
-
-    Returns:
-        Lista di lotti di produzione con quantità casuali
-    """
-    lotti = []
-    for specie in specie_disponibili:
-        numero_larve = random.randint(min_larve, max_larve)
-        lotti.append(LottoProduzione(specie, numero_larve))
-    return lotti
-
-# ============================================================================
-# 4. CALCOLI PRODUTTIVI - Funzioni di supporto
-# ============================================================================
-
-def calcola_vasche_larvali(lotto: LottoProduzione, config: ConfigurazioneGruppoDelPesce) -> int:
-    """Calcola il numero di vasche larvali necessarie"""
-    densita = lotto.specie.densita_semina_larvale
-
-    # Usa un mix di vasche (piccole, medie, grandi)
-    capacita_media = 8000  # litri (media tra i vari tipi)
-    vasche_totali = config.vasche_larvali_piccole + config.vasche_larvali_medie + config.vasche_larvali_grandi
-
-    larve_per_vasca = capacita_media * densita
-    vasche_necessarie = int(lotto.numero_larve / larve_per_vasca) + 1
-
-    return min(vasche_necessarie, vasche_totali)
-
-def calcola_vasche_preingrasso(post_larve: int, config: ConfigurazioneGruppoDelPesce) -> int:
-    """Calcola vasche necessarie per il preingrasso"""
-    capacita_vasca = 40000  # litri
-    densita = 400  # avannotti per mc (ridotta per benessere)
-
-    post_larve_per_vasca = (capacita_vasca / 1000) * densita
-    vasche_necessarie = int(post_larve / post_larve_per_vasca) + 1
-
-    return min(vasche_necessarie, config.vasche_preingrasso)
-
-def calcola_gabbie_ingrasso(avannotti: int, specie: SpecieIttica, config: ConfigurazioneGruppoDelPesce) -> int:
-    """Calcola gabbie necessarie per fase di ingrasso fino a taglia commerciale"""
-    densita = specie.densita_ingrasso
-    volume_gabbia = config.volume_gabbia
-
-    pesci_per_gabbia = volume_gabbia * densita
-    gabbie_necessarie = int(avannotti / pesci_per_gabbia) + 1
-
-    gabbie_totali_disponibili = config.gabbie_per_impianto * config.numero_impianti
-    return min(gabbie_necessarie, gabbie_totali_disponibili)
-
-# ============================================================================
-# 5. SEQUENZE PRODUTTIVE
+# SEQUENZE PRODUTTIVE
 # ============================================================================
 
 def sequenza_produzione_completa_sequenziale(lotti: List[LottoProduzione], config: ConfigurazioneGruppoDelPesce) -> Dict:
     """
-    SEQUENZA 1: Produzione completa sequenziale
-
-    Dalla larva alla taglia commerciale, completando una specie
-    prima di iniziare la successiva.
+    Simula il processo produttivo completando interamente un lotto alla volta.
+    Ogni specie attraversa tutte le fasi (larvale, preingrasso, ingrasso) prima
+    che inizi la lavorazione della specie successiva. Calcola vasche necessarie,
+    sopravvivenza in ogni fase, tempo totale e tonnellate prodotte per lotto.
+    Restituisce un dizionario con metodo, dettagli per specie e tempo totale accumulato.
     """
     risultati = {
         'metodo': 'Sequenziale (dalla nascita alla taglia commerciale)',
@@ -181,10 +80,11 @@ def sequenza_produzione_completa_sequenziale(lotti: List[LottoProduzione], confi
 
 def sequenza_produzione_integrata_sovrapposta(lotti: List[LottoProduzione], config: ConfigurazioneGruppoDelPesce) -> Dict:
     """
-    SEQUENZA 2: Produzione integrata con sovrapposizione
-
-    Gestione simultanea di più lotti in fasi diverse, ottimizzando
-    l'uso delle strutture dell'avannotteria e dei 6 impianti produttivi.
+    Simula una produzione sovrapposta dove più lotti vengono gestiti contemporaneamente.
+    Un nuovo lotto può iniziare quando il precedente libera le vasche larvali, permettendo
+    un uso più efficiente delle risorse. Traccia inizio/fine di ogni fase per ogni lotto
+    e calcola il tempo massimo complessivo invece della somma dei tempi. Ottimizza throughput
+    sfruttando la parallelizzazione delle fasi produttive tra i diversi lotti.
     """
     risultati = {
         'metodo': 'Integrata Sovrapposta (gestione multi-lotto simultanea)',
@@ -258,25 +158,30 @@ def sequenza_produzione_integrata_sovrapposta(lotti: List[LottoProduzione], conf
 # ============================================================================
 
 def stampa_risultati(risultati: Dict):
-    """Stampa i risultati della simulazione in modo leggibile"""
+    """
+    Formatta e stampa su console i risultati della simulazione in modo strutturato.
+    # Visualizza per ogni specie: numeri (larve, avannotti, pesci, tonnellate),
+    # risorse utilizzate (vasche e gabbie), tempi di ogni fase e performance complessive.
+    # Include anche totali aggregati di produzione e tempo complessivo del ciclo.
+    """
     print(f"\n{'='*80}")
     print(f"RISULTATI SIMULAZIONE - {risultati['metodo']}")
     print(f"{'='*80}")
 
     for dettaglio in risultati['dettagli']:
-        print(f"\n🐟 Specie: {dettaglio['specie']}")
-        print(f"   📊 NUMERI:")
+        print(f"\n Specie: {dettaglio['specie']}")
+        print(f"    NUMERI:")
         print(f"      Larve seminate: {dettaglio['larve_seminate']:,} larve")
         print(f"      Avannotti prodotti (2g): {dettaglio['avannotti_2g']:,}")
         print(f"      Pesci commerciali: {dettaglio['pesci_commerciali']:,}")
         print(f"      Tonnellate prodotte: {dettaglio['tonnellate_prodotte']} t")
 
-        print(f"\n   🏭 RISORSE UTILIZZATE:")
+        print(f"\n    RISORSE UTILIZZATE:")
         print(f"      Vasche larvali: {dettaglio['vasche_larvali']}")
         print(f"      Vasche preingrasso: {dettaglio['vasche_preingrasso']}")
         print(f"      Gabbie ingrasso: {dettaglio['gabbie_ingrasso']}")
 
-        print(f"\n   ⏱️  TEMPI:")
+        print(f"\n     TEMPI:")
         if 'inizio_giorno' in dettaglio:
             print(f"      Inizio ciclo: giorno {dettaglio['inizio_giorno']}")
             print(f"      Fine larvale: giorno {dettaglio['fine_larvale_giorno']} ({dettaglio['giorni_larvali']}gg)")
@@ -288,16 +193,16 @@ def stampa_risultati(risultati: Dict):
             print(f"      Fase ingrasso: {dettaglio['giorni_ingrasso']} giorni")
             print(f"      Tempo totale: {dettaglio['giorni_totali']} giorni")
 
-        print(f"\n   📈 PERFORMANCE:")
+        print(f"\n    PERFORMANCE:")
         print(f"      Tasso sopravvivenza totale: {dettaglio['tasso_sopravvivenza_totale']}%")
 
     print(f"\n{'='*80}")
-    print(f"⏱️  TEMPO TOTALE CICLO PRODUTTIVO: {risultati['tempo_totale']} giorni")
+    print(f"️  TEMPO TOTALE CICLO PRODUTTIVO: {risultati['tempo_totale']} giorni")
 
     # Calcola produzione totale
     tot_tonnellate = sum(d['tonnellate_prodotte'] for d in risultati['dettagli'])
     tot_pesci = sum(d['pesci_commerciali'] for d in risultati['dettagli'])
-    print(f"🐟 PRODUZIONE TOTALE: {tot_tonnellate:.2f} tonnellate ({tot_pesci:,} pesci)")
+    print(f" PRODUZIONE TOTALE: {tot_tonnellate:.2f} tonnellate ({tot_pesci:,} pesci)")
     print(f"{'='*80}\n")
 
 # ============================================================================
@@ -305,10 +210,17 @@ def stampa_risultati(risultati: Dict):
 # ============================================================================
 
 def main():
-    """Funzione principale che esegue la simulazione"""
+    """
+    Punto di ingresso principale del programma. Configura l'ambiente di simulazione,
+    # definisce le tre specie ittiche (Spigola, Orata, Ombrina) con i loro parametri
+    # specifici, inizializza la configurazione dell'impianto del Gruppo Del Pesce,
+    # genera lotti casuali, esegue entrambe le simulazioni (sequenziale e sovrapposta),
+    # genera il report grafico PNG, e stampa il confronto dettagliato tra i metodi
+    # includendo analisi della produzione annuale e raggiungimento del target aziendale.
+    """
 
     print("\n" + "="*80)
-    print("🐠 SIMULAZIONE PRODUZIONE - GRUPPO DEL PESCE")
+    print(" SIMULAZIONE PRODUZIONE - GRUPPO DEL PESCE")
     print("   Filiera integrata: dalla nascita alla taglia commerciale")
     print("   Sede: Guidonia (RM) - 6 impianti produttivi in Italia")
     print("="*80)
@@ -356,37 +268,32 @@ def main():
     # Configura il gruppo produttivo
     config = ConfigurazioneGruppoDelPesce()
 
-    print(f"\n📋 CONFIGURAZIONE GRUPPO DEL PESCE:")
-    print(f"\n   🏭 AVANNOTTERIA (Riproduzione):")
+    print(f"\n CONFIGURAZIONE GRUPPO DEL PESCE:")
+    print(f"\n    AVANNOTTERIA (Riproduzione):")
     print(f"      - Vasche larvali piccole (2-5mc): {config.vasche_larvali_piccole}")
     print(f"      - Vasche larvali medie (10mc): {config.vasche_larvali_medie}")
     print(f"      - Vasche larvali grandi (20mc): {config.vasche_larvali_grandi}")
     print(f"      - Vasche preingrasso (40mc): {config.vasche_preingrasso}")
 
-    print(f"\n   🌊 IMPIANTI PRODUTTIVI:")
+    print(f"\n    IMPIANTI PRODUTTIVI:")
     print(f"      - Numero impianti: {config.numero_impianti}")
     print(f"      - Gabbie per impianto: {config.gabbie_per_impianto}")
     print(f"      - Volume gabbia: {config.volume_gabbia} mc")
     print(f"      - Impianto terra Orbetello: {config.vasche_terra_orbetello} vasche da {config.volume_vasca_terra} mc")
 
-    print(f"\n   📊 CAPACITÀ E PARAMETRI:")
+    print(f"\n    CAPACITÀ E PARAMETRI:")
     print(f"      - Capacità produttiva annua: {config.capacita_produttiva_annua:,} tonnellate/anno")
     print(f"      - Sopravvivenza larvale: {config.tasso_sopravvivenza_larvale*100}%")
     print(f"      - Sopravvivenza preingrasso: {config.tasso_sopravvivenza_preingrasso*100}%")
     print(f"      - Sopravvivenza ingrasso: {config.tasso_sopravvivenza_ingrasso*100}%")
     print(f"      - Efficienza operativa: {config.efficienza_operativa*100}%")
 
-    print(f"\n   ✅ CERTIFICAZIONI:")
-    for cert in config.certificazioni:
-        print(f"      - {cert}")
 
     # Genera lotti casuali
-    print("\n🎲 Generazione lotti di produzione...")
-    lotti = genera_lotti_casuali(specie_ittiche,
-                                min_larve=1200000,
-                                max_larve=2500000)
+    print("\n Generazione lotti di produzione...")
+    lotti = genera_lotti_casuali(specie_ittiche, min_larve=1000000, max_larve=2500000)
 
-    print("\n📦 Lotti generati:")
+    print("\n Lotti generati:")
     for lotto in lotti:
         print(f"   - {lotto.specie.nome}")
         print(f"     Larve da seminare: {lotto.numero_larve:,} larve")
@@ -407,11 +314,11 @@ def main():
         nome_file="report_produzione.png"
     )
 
-    print(f"✅ Report generato: {file_png}")
+    print(f" Report generato: {file_png}")
 
     # Confronto finale
     print("\n" + "="*80)
-    print("📊 CONFRONTO TRA METODI DI GESTIONE PRODUTTIVA")
+    print(" CONFRONTO TRA METODI DI GESTIONE PRODUTTIVA")
     print("="*80)
     print(f"Metodo Sequenziale: {risultati_seq['tempo_totale']} giorni")
     print(f"Metodo Integrato Sovrapposto: {risultati_sov['tempo_totale']} giorni")
@@ -419,14 +326,14 @@ def main():
     differenza = risultati_seq['tempo_totale'] - risultati_sov['tempo_totale']
     if differenza > 0:
         percentuale = (differenza / risultati_seq['tempo_totale']) * 100
-        print(f"\n💡 RISPARMIO con metodo integrato: {differenza} giorni ({percentuale:.1f}%)")
+        print(f"\n RISPARMIO con metodo integrato sovrapposto: {differenza} giorni ({percentuale:.1f}%)")
         print(f"   ✓ Ottimizzazione uso avannotteria")
         print(f"   ✓ Distribuzione efficiente su 6 impianti")
         print(f"   ✓ Maggiore flessibilità produttiva")
 
     # Analisi produzione
     tot_tonnellate_seq = sum(d['tonnellate_prodotte'] for d in risultati_seq['dettagli'])
-    print(f"\n🐟 PRODUZIONE ANNUALE STIMATA:")
+    print(f"\n PRODUZIONE ANNUALE STIMATA:")
     print(f"   Tonnellate per ciclo: {tot_tonnellate_seq:.2f} t")
     cicli_anno = 365 / risultati_sov['tempo_totale']
     produzione_annua = tot_tonnellate_seq * cicli_anno
@@ -437,9 +344,13 @@ def main():
     percentuale_target = (produzione_annua / config.capacita_produttiva_annua) * 100
     print(f"   Raggiungimento target: {percentuale_target:.1f}%")
 
-    print("\n" + "="*80)
-    print("🌊 100% ITALIANO DALLA NASCITA - Filiera completamente integrata")
-    print("="*80 + "\n")
+    print("\n" + "=" * 80)
+    print(f"Report grafico completo salvato in: '{file_png}'.")
+    print(
+        "Il PNG contiene tutti i grafici per un approfondimento dettagliato: confronto tra i metodi, trend dei tassi di sopravvivenza per fase, produzione per specie e utilizzo delle risorse.")
+    print(f"Apri '{file_png}' per visualizzare le figure e i dettagli analitici.")
+    print("=" * 80 + "\n")
+
 
 # Esegui il programma
 if __name__ == "__main__":

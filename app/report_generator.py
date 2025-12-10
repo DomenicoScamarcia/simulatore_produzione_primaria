@@ -2,7 +2,7 @@
 GENERATORE DI REPORT GRAFICI - GRUPPO DEL PESCE
 Classe per generare report visivi con grafici e tabelle in formato PNG
 """
-
+from pathlib import Path
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 from matplotlib.gridspec import GridSpec
@@ -13,467 +13,519 @@ from datetime import datetime
 
 class ReportGeneratorGruppoDelPesce:
     """
-    Genera report grafici completi con:
-    - Grafici a barre
-    - Grafici a torta
-    - Tabelle comparatives
-    - Timeline produttive
-    - KPI dashboard
+    Genera report grafici completi con layout pulito e ordinato
     """
 
     def __init__(self, config):
         """
-        Inizializza il generatore di report
-
-        Args:
-            config: Oggetto ConfigurazioneGruppoDelPesce
+        Inizializza il generatore di report configurando i colori per i grafici,
+        lo stile matplotlib (font, dimensioni testo, spessori), e disabilitando
+        i warning relativi ai glifi mancanti. Memorizza la configurazione
+        dell'impianto per calcoli successivi (es. capacità produttiva annua).
         """
         self.config = config
         self.colors = {
-            'primary': '#667eea',
-            'secondary': '#764ba2',
-            'success': '#48bb78',
-            'warning': '#f6ad55',
-            'danger': '#fc8181',
-            'spigola': '#3182ce',
-            'orata': '#dd6b20',
-            'ombrina': '#38a169'
+            'primary': '#2563eb',
+            'secondary': '#7c3aed',
+            'success': '#16a34a',
+            'warning': '#ea580c',
+            'danger': '#dc2626',
+            'seq': '#dc2626',      # Rosso per sequenziale
+            'sov': '#16a34a',      # Verde per sovrapposto
+            'spigola': '#0891b2',
+            'orata': '#f59e0b',
+            'ombrina': '#059669'
         }
 
         # Configura lo stile matplotlib
-        plt.style.use('seaborn-v0_8-darkgrid')
-        plt.rcParams['font.family'] = 'DejaVu Sans'  # Font che supporta emoji
-        plt.rcParams['font.size'] = 9
-        plt.rcParams['axes.labelsize'] = 10
-        plt.rcParams['axes.titlesize'] = 12
-        plt.rcParams['xtick.labelsize'] = 9
-        plt.rcParams['ytick.labelsize'] = 9
-        plt.rcParams['legend.fontsize'] = 9
+        plt.style.use('default')
+        plt.rcParams['font.family'] = 'sans-serif'
+        plt.rcParams['font.sans-serif'] = ['Arial', 'Helvetica', 'DejaVu Sans']
+        plt.rcParams['font.size'] = 11
+        plt.rcParams['axes.labelsize'] = 12
+        plt.rcParams['axes.titlesize'] = 14
+        plt.rcParams['axes.titleweight'] = 'bold'
+        plt.rcParams['xtick.labelsize'] = 10
+        plt.rcParams['ytick.labelsize'] = 10
+        plt.rcParams['legend.fontsize'] = 10
+        plt.rcParams['figure.titlesize'] = 16
+        plt.rcParams['figure.titleweight'] = 'bold'
 
-        # Disabilita warning per glifi mancanti
+        # Disabilita warning
         import warnings
         warnings.filterwarnings('ignore', category=UserWarning, module='matplotlib')
 
-    def genera_report_completo(self,
-                               risultati_seq: Dict,
-                               risultati_sov: Dict,
-                               lotti: List,
-                               nome_file: str = None) -> str:
+    def genera_report_completo(self, risultati_seq: Dict, risultati_sov: Dict, lotti: List, nome_file: str = None) -> str:
         """
-        Genera un report completo con tutti i grafici e tabelle
-
-        Args:
-            risultati_seq: Risultati simulazione sequenziale
-            risultati_sov: Risultati simulazione sovrapposta
-            lotti: Lista dei lotti simulati
-            nome_file: Nome del file di output (opzionale)
-
-        Returns:
-            str: Path del file PNG generato
+        Crea un report visivo completo in formato PNG con 7 sezioni:
+        1) KPI globali (larve, pesci, tonnellate, sopravvivenza, risparmio)
+        2) Confronto diretto tra metodo sequenziale e sovrapposto
+        3) Dettagli metodo sequenziale con tempi per specie
+        4) Dettagli metodo sovrapposto con timeline delle fasi
+        5) Distribuzione produzione per specie (grafico a torta)
+        6) Risorse utilizzate (vasche e gabbie per specie)
+        7) Tabella riepilogo comparativo con tutti i dati
+        Salva il file nella cartella "report" e restituisce il percorso assoluto.
         """
         if nome_file is None:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             nome_file = f"report_gruppo_del_pesce_{timestamp}.png"
 
-        # Crea figura con layout complesso
-        fig = plt.figure(figsize=(20, 14))
-        fig.suptitle('🐠 REPORT SIMULAZIONE PRODUZIONE - GRUPPO DEL PESCE',
-                     fontsize=20, fontweight='bold', y=0.98)
+        # Crea figura più grande con più spazio
+        fig = plt.figure(figsize=(24, 16))
+        fig.patch.set_facecolor('white')
+
+        # Titolo principale
+        fig.suptitle('REPORT SIMULAZIONE PRODUZIONE - GRUPPO DEL PESCE', fontsize=22, fontweight='bold', y=0.97)
 
         # Sottotitolo
-        fig.text(0.5, 0.95,
-                'Filiera integrata: dalla nascita alla taglia commerciale | Guidonia (RM)',
-                ha='center', fontsize=12, style='italic', color='gray')
+        fig.text(0.5, 0.945, 'Filiera integrata: dalla nascita alla taglia commerciale | Guidonia (RM)', ha='center', fontsize=13, style='italic', color='#4b5563')
 
-        # Crea griglia complessa
-        gs = GridSpec(4, 3, figure=fig, hspace=0.4, wspace=0.3,
-                     left=0.05, right=0.95, top=0.92, bottom=0.05)
+        # Crea griglia con più spazio
+        gs = GridSpec(5, 2, figure=fig, hspace=0.5, wspace=0.35, left=0.06, right=0.94, top=0.92, bottom=0.05)
 
-        # 1. KPI Dashboard (riga 1)
+        # 1. KPI GLOBALI (riga 1, colonne 1-2)
         ax1 = fig.add_subplot(gs[0, :])
-        self._crea_kpi_dashboard(ax1, lotti, risultati_sov)
+        self._crea_kpi_globali(ax1, lotti, risultati_seq, risultati_sov)
 
-        # 2. Confronto tempi (riga 2, colonna 1)
-        ax2 = fig.add_subplot(gs[1, 0])
-        self._crea_grafico_confronto_tempi(ax2, risultati_seq, risultati_sov)
+        # 2. CONFRONTO DIRETTO SEQUENZIALE VS SOVRAPPOSTO (riga 2, colonne 1-2)
+        ax2 = fig.add_subplot(gs[1, :])
+        self._crea_confronto_principale(ax2, risultati_seq, risultati_sov)
 
-        # 3. Distribuzione produzione (riga 2, colonna 2)
-        ax3 = fig.add_subplot(gs[1, 1])
-        self._crea_grafico_torta_produzione(ax3, risultati_sov)
+        # 3. DETTAGLI METODO SEQUENZIALE (riga 3, colonna 1)
+        ax3 = fig.add_subplot(gs[2, 0])
+        self._crea_dettagli_sequenziale(ax3, risultati_seq)
 
-        # 4. Analisi sopravvivenza (riga 2, colonna 3)
-        ax4 = fig.add_subplot(gs[1, 2])
-        self._crea_grafico_sopravvivenza(ax4, risultati_sov)
+        # 4. DETTAGLI METODO SOVRAPPOSTO (riga 3, colonna 2)
+        ax4 = fig.add_subplot(gs[2, 1])
+        self._crea_dettagli_sovrapposto(ax4, risultati_sov)
 
-        # 5. Timeline produttiva (riga 3, colonne 1-2)
-        ax5 = fig.add_subplot(gs[2, :2])
-        self._crea_timeline_produttiva(ax5, risultati_sov)
+        # 5. DISTRIBUZIONE PRODUZIONE (riga 4, colonna 1)
+        ax5 = fig.add_subplot(gs[3, 0])
+        self._crea_distribuzione_specie(ax5, risultati_sov)
 
-        # 6. Risorse utilizzate (riga 3, colonna 3)
-        ax6 = fig.add_subplot(gs[2, 2])
+        # 6. RISORSE UTILIZZATE (riga 4, colonna 2)
+        ax6 = fig.add_subplot(gs[3, 1])
         self._crea_grafico_risorse(ax6, risultati_sov)
 
-        # 7. Tabella comparativa (riga 4, colonne 1-2)
-        ax7 = fig.add_subplot(gs[3, :2])
-        self._crea_tabella_comparativa(ax7, risultati_seq, risultati_sov)
+        # 7. TABELLA COMPARATIVA (riga 5, colonne 1-2)
+        ax7 = fig.add_subplot(gs[4, :])
+        self._crea_tabella_riepilogo(ax7, risultati_seq, risultati_sov)
 
-        # 8. Analisi produzione annuale (riga 4, colonna 3)
-        ax8 = fig.add_subplot(gs[3, 2])
-        self._crea_grafico_produzione_annuale(ax8, risultati_sov)
+        # --- Salva figura nella cartella "report" situata allo stesso livello di "app" ---
+        # Cartella report: ../report relative al file current (app/report_generator.py)
+        report_dir = Path(__file__).resolve().parent.parent / "report"
+        report_dir.mkdir(parents=True, exist_ok=True)
 
-        # Salva figura
-        plt.savefig(nome_file, dpi=300, bbox_inches='tight',
-                   facecolor='white', edgecolor='none')
+        # Assicura che il nome file non contenga slash imprevisti
+        nome_file = Path(nome_file).name
+
+        file_path = report_dir / nome_file
+        plt.savefig(file_path, dpi=300, bbox_inches='tight', facecolor='white', edgecolor='none')
         plt.close()
 
-        return nome_file
+        # Ritorna il percorso assoluto del file come stringa
+        return str(file_path)
 
-    def _crea_kpi_dashboard(self, ax, lotti, risultati):
-        """Crea dashboard con KPI principali"""
+    def _crea_kpi_globali(self, ax, lotti, risultati_seq, risultati_sov):
+        """
+        Crea una dashboard con 5 KPI principali visualizzati come card colorate:
+        larve seminate, pesci prodotti, tonnellate, tasso di sopravvivenza totale
+        e risparmio di tempo tra i due metodi. Ogni card ha un colore distintivo,
+        un'etichetta in alto e il valore numerico grande al centro. Le card sono
+        distribuite orizzontalmente nella parte superiore del report.
+        """
         ax.axis('off')
+        ax.set_xlim(0, 1)
+        ax.set_ylim(0, 1)
 
         # Calcola KPI
         totale_larve = sum(l.numero_larve for l in lotti)
-        totale_pesci = sum(d['pesci_commerciali'] for d in risultati['dettagli'])
-        totale_tonnellate = sum(d['tonnellate_prodotte'] for d in risultati['dettagli'])
+        totale_pesci = sum(d['pesci_commerciali'] for d in risultati_sov['dettagli'])
+        totale_tonnellate = sum(d['tonnellate_prodotte'] for d in risultati_sov['dettagli'])
         tasso_sopravvivenza = (totale_pesci / totale_larve * 100)
 
+        risparmio = risultati_seq['tempo_totale'] - risultati_sov['tempo_totale']
+        risparmio_perc = (risparmio / risultati_seq['tempo_totale'] * 100)
+
         kpis = [
-            ('🐟 LARVE SEMINATE', f'{totale_larve:,}', 'larve'),
-            ('🎣 PESCI COMMERCIALI', f'{totale_pesci:,}', 'pesci'),
-            ('⚖️ TONNELLATE', f'{totale_tonnellate:.2f} t', ''),
-            ('📈 SOPRAVVIVENZA', f'{tasso_sopravvivenza:.1f}%', 'totale')
+            ('LARVE SEMINATE', f'{totale_larve:,}', self.colors['primary']),
+            ('PESCI PRODOTTI', f'{totale_pesci:,}', self.colors['success']),
+            ('TONNELLATE', f'{totale_tonnellate:.1f} t', self.colors['warning']),
+            ('SOPRAVVIVENZA', f'{tasso_sopravvivenza:.1f}%', self.colors['secondary']),
+            ('RISPARMIO TEMPO', f'{risparmio} gg ({risparmio_perc:.0f}%)', self.colors['sov'])
         ]
 
-        # Disegna KPI cards
-        card_width = 0.22
-        card_height = 0.8
-        start_x = 0.05
+        card_width = 0.18
+        spacing = 0.205
+        start_x = 0.01
 
-        for i, (label, value, subtitle) in enumerate(kpis):
-            x = start_x + i * 0.24
+        for i, (label, value, color) in enumerate(kpis):
+            x = start_x + i * spacing
 
-            # Box colorato
+            # Box con bordo
             rect = mpatches.FancyBboxPatch(
-                (x, 0.1), card_width, card_height,
-                boxstyle="round,pad=0.02",
-                facecolor=self.colors['primary'] if i % 2 == 0 else self.colors['secondary'],
-                edgecolor='none', alpha=0.2, transform=ax.transAxes
+                (x, 0.15), card_width, 0.7,
+                boxstyle="round,pad=0.015",
+                facecolor=color,
+                edgecolor=color,
+                alpha=0.15,
+                linewidth=2,
+                transform=ax.transAxes
             )
             ax.add_patch(rect)
 
-            # Testo
-            ax.text(x + card_width/2, 0.7, label,
-                   ha='center', va='center', fontsize=10,
-                   fontweight='bold', transform=ax.transAxes)
-
-            ax.text(x + card_width/2, 0.45, value,
-                   ha='center', va='center', fontsize=16,
-                   fontweight='bold', color=self.colors['primary'],
+            # Label
+            ax.text(x + card_width/2, 0.75, label,
+                   ha='center', va='center', fontsize=11,
+                   fontweight='bold', color='#374151',
                    transform=ax.transAxes)
 
-            if subtitle:
-                ax.text(x + card_width/2, 0.25, subtitle,
-                       ha='center', va='center', fontsize=8,
-                       style='italic', color='gray', transform=ax.transAxes)
+            # Value
+            ax.text(x + card_width/2, 0.4, value,
+                   ha='center', va='center', fontsize=18,
+                   fontweight='bold', color=color,
+                   transform=ax.transAxes)
 
-    def _crea_grafico_confronto_tempi(self, ax, risultati_seq, risultati_sov):
-        """Crea grafico a barre per confronto tempi"""
-        metodi = ['Sequenziale', 'Sovrapposto']
-        tempi = [risultati_seq['tempo_totale'], risultati_sov['tempo_totale']]
-        colors = [self.colors['danger'], self.colors['success']]
+    def _crea_confronto_principale(self, ax, risultati_seq, risultati_sov):
+        """
+        Crea il grafico di confronto principale con due barre orizzontali grandi
+        che rappresentano i tempi totali dei due metodi produttivi. Il metodo
+        sequenziale è in rosso (sopra), il metodo sovrapposto in verde (sotto).
+        Include etichette sui lati, valori sui centri delle barre, e una freccia
+        bidirezionale centrale che evidenzia il risparmio in giorni e percentuale.
+        Questo grafico è il punto focale del report per il confronto immediato.
+        """
+        ax.set_xlim(0, max(risultati_seq['tempo_totale'], risultati_sov['tempo_totale']) * 1.2)
+        ax.set_ylim(-0.5, 1.5)
 
-        bars = ax.bar(metodi, tempi, color=colors, alpha=0.7, edgecolor='black', linewidth=1.5)
+        # Barre orizzontali grandi
+        bar_height = 0.35
 
-        # Aggiungi valori sopra le barre
-        for bar in bars:
-            height = bar.get_height()
-            ax.text(bar.get_x() + bar.get_width()/2., height,
-                   f'{int(height)} gg',
-                   ha='center', va='bottom', fontweight='bold', fontsize=11)
+        # SEQUENZIALE (sopra)
+        ax.barh(1, risultati_seq['tempo_totale'], height=bar_height,
+               color=self.colors['seq'], alpha=0.7, edgecolor='black', linewidth=2,
+               label='Metodo Sequenziale')
 
-        # Calcola risparmio
+        # Testo sulla barra
+        ax.text(risultati_seq['tempo_totale']/2, 1,
+               f"SEQUENZIALE: {risultati_seq['tempo_totale']} giorni",
+               ha='center', va='center', fontsize=14, fontweight='bold',
+               color='white')
+
+        # SOVRAPPOSTO (sotto)
+        ax.barh(0, risultati_sov['tempo_totale'], height=bar_height,
+               color=self.colors['sov'], alpha=0.7, edgecolor='black', linewidth=2,
+               label='Metodo Sovrapposto')
+
+        # Testo sulla barra
+        ax.text(risultati_sov['tempo_totale']/2, 0,
+               f"SOVRAPPOSTO: {risultati_sov['tempo_totale']} giorni",
+               ha='center', va='center', fontsize=14, fontweight='bold',
+               color='white')
+
+        # Etichette metodi
+        ax.text(-50, 1, 'METODO\nSEQUENZIALE',
+               ha='right', va='center', fontsize=12, fontweight='bold',
+               color=self.colors['seq'])
+
+        ax.text(-50, 0, 'METODO\nSOVRAPPOSTO\n(OTTIMALE)',
+               ha='right', va='center', fontsize=12, fontweight='bold',
+               color=self.colors['sov'])
+
+        # Freccia risparmio
         risparmio = risultati_seq['tempo_totale'] - risultati_sov['tempo_totale']
         percentuale = (risparmio / risultati_seq['tempo_totale'] * 100)
 
-        ax.set_ylabel('Giorni', fontweight='bold')
-        ax.set_title('⏱️ Confronto Tempi Produttivi', fontweight='bold', pad=15)
-        ax.grid(axis='y', alpha=0.3)
+        ax.annotate('',
+                   xy=(risultati_sov['tempo_totale'], 0.5),
+                   xytext=(risultati_seq['tempo_totale'], 0.5),
+                   arrowprops=dict(arrowstyle='<->', color=self.colors['sov'], lw=3, mutation_scale=20))
 
-        # Aggiungi testo risparmio
-        ax.text(0.5, 0.95, f'Risparmio: {risparmio} giorni ({percentuale:.1f}%)',
-               transform=ax.transAxes, ha='center', va='top',
-               bbox=dict(boxstyle='round', facecolor=self.colors['success'], alpha=0.3),
-               fontweight='bold')
+        ax.text((risultati_seq['tempo_totale'] + risultati_sov['tempo_totale'])/2, 0.6,
+               f'RISPARMIO: {risparmio} giorni ({percentuale:.1f}%)',
+               ha='center', va='bottom', fontsize=13, fontweight='bold',
+               color=self.colors['sov'],
+               bbox=dict(boxstyle='round,pad=0.5', facecolor='white', edgecolor=self.colors['sov'], linewidth=2))
 
-    def _crea_grafico_torta_produzione(self, ax, risultati):
-        """Crea grafico a torta per distribuzione produzione"""
-        specie = [d['specie'] for d in risultati['dettagli']]
-        tonnellate = [d['tonnellate_prodotte'] for d in risultati['dettagli']]
+        ax.set_xlabel('TEMPO TOTALE DI PRODUZIONE (giorni)', fontsize=13, fontweight='bold')
+        ax.set_yticks([])
+        ax.grid(axis='x', alpha=0.3, linestyle='--')
+        ax.set_title('CONFRONTO TEMPI PRODUTTIVI: SEQUENZIALE VS SOVRAPPOSTO', fontsize=15, fontweight='bold', pad=20)
 
-        colors_specie = [self.colors['spigola'], self.colors['orata'], self.colors['ombrina']]
+        # Bordo
+        for spine in ax.spines.values():
+            spine.set_edgecolor('#d1d5db')
+            spine.set_linewidth(2)
 
-        wedges, texts, autotexts = ax.pie(tonnellate, labels=specie, autopct='%1.1f%%',
-                                          colors=colors_specie, startangle=90,
-                                          explode=(0.05, 0.05, 0.05))
+    def _crea_dettagli_sequenziale(self, ax, risultati):
+        """
+        Visualizza i dettagli del metodo sequenziale con un grafico a barre
+        orizzontali che mostra i giorni totali necessari per ogni specie
+        (Spigola, Orata, Ombrina). Ogni barra ha un colore distintivo per specie,
+        i valori sono mostrati a destra delle barre, e il bordo del grafico è
+        rosso per identificarlo come relativo al metodo sequenziale. Include
+        il tempo totale nel titolo.
+        """
+        dettagli = risultati['dettagli']
 
-        # Migliora la leggibilità
-        for autotext in autotexts:
-            autotext.set_color('white')
-            autotext.set_fontweight('bold')
-            autotext.set_fontsize(10)
+        specie_nomi = []
+        giorni_totali = []
 
-        for text in texts:
-            text.set_fontsize(9)
-            text.set_fontweight('bold')
+        for d in dettagli:
+            nome = d['specie'].split('/')[0] if '/' in d['specie'] else d['specie']
+            specie_nomi.append(nome)
+            giorni = d.get('giorni_totali', d.get('fine_ingrasso_giorno', 0))
+            giorni_totali.append(giorni)
 
-        ax.set_title('🐟 Distribuzione Produzione per Specie', fontweight='bold', pad=15)
+        # Grafico a barre orizzontali
+        y_pos = np.arange(len(specie_nomi))
+        colors = [self.colors['spigola'], self.colors['orata'], self.colors['ombrina']]
 
-    def _crea_grafico_sopravvivenza(self, ax, risultati):
-        """Crea grafico a barre per tassi di sopravvivenza"""
-        specie = [d['specie'].split('/')[0] if '/' in d['specie'] else d['specie']
-                 for d in risultati['dettagli']]
-        tassi = [d['tasso_sopravvivenza_totale'] for d in risultati['dettagli']]
+        bars = ax.barh(y_pos, giorni_totali, color=colors, alpha=0.8,
+                      edgecolor='black', linewidth=1.5)
 
-        colors_specie = [self.colors['spigola'], self.colors['orata'], self.colors['ombrina']]
-
-        bars = ax.barh(specie, tassi, color=colors_specie, alpha=0.7, edgecolor='black', linewidth=1.5)
-
-        # Aggiungi valori
+        # Valori sulle barre
         for i, bar in enumerate(bars):
             width = bar.get_width()
-            ax.text(width, bar.get_y() + bar.get_height()/2.,
-                   f'{tassi[i]}%',
-                   ha='left', va='center', fontweight='bold', fontsize=10,
-                   bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
+            ax.text(width + 20, bar.get_y() + bar.get_height()/2,
+                   f'{int(giorni_totali[i])} gg',
+                   ha='left', va='center', fontsize=11, fontweight='bold')
 
-        ax.set_xlabel('Tasso di Sopravvivenza (%)', fontweight='bold')
-        ax.set_title('📈 Tasso di Sopravvivenza Totale', fontweight='bold', pad=15)
-        ax.set_xlim(0, 100)
-        ax.grid(axis='x', alpha=0.3)
+        ax.set_yticks(y_pos)
+        ax.set_yticklabels(specie_nomi, fontsize=11, fontweight='bold')
+        ax.set_xlabel('Giorni per Specie', fontsize=11, fontweight='bold')
+        ax.set_title(f'METODO SEQUENZIALE\nTempo totale: {risultati["tempo_totale"]} giorni',
+                    fontsize=13, fontweight='bold', pad=15,
+                    color=self.colors['seq'])
+        ax.grid(axis='x', alpha=0.3, linestyle='--')
+        ax.invert_yaxis()
 
-    def _crea_timeline_produttiva(self, ax, risultati):
-        """Crea timeline Gantt della produzione sovrapposta"""
+        # Bordo rosso
+        for spine in ax.spines.values():
+            spine.set_edgecolor(self.colors['seq'])
+            spine.set_linewidth=3
+
+    def _crea_dettagli_sovrapposto(self, ax, risultati):
+        """
+        Crea una timeline Gantt che visualizza la sovrapposizione temporale
+        dei lotti nel metodo sovrapposto. Per ogni specie mostra tre segmenti
+        di barra con opacità crescente che rappresentano le tre fasi produttive:
+        larvale (chiara), preingrasso (media), ingrasso (scura). La timeline
+        permette di vedere come i lotti si sovrappongono nel tempo, ottimizzando
+        l'uso delle risorse. Il bordo verde identifica il metodo sovrapposto.
+        """
         dettagli = risultati['dettagli']
 
         y_pos = np.arange(len(dettagli))
-        colors_specie = [self.colors['spigola'], self.colors['orata'], self.colors['ombrina']]
+        colors = [self.colors['spigola'], self.colors['orata'], self.colors['ombrina']]
 
         for i, det in enumerate(dettagli):
             specie_nome = det['specie'].split('/')[0] if '/' in det['specie'] else det['specie']
 
-            # Fase larvale
+            # Fase larvale (chiara)
             ax.barh(i, det['giorni_larvali'], left=det['inizio_giorno'],
-                   color=colors_specie[i], alpha=0.3, edgecolor='black', linewidth=1,
+                   color=colors[i], alpha=0.3, edgecolor='black', linewidth=1.5,
                    label='Larvale' if i == 0 else '')
 
-            # Fase preingrasso
+            # Fase preingrasso (media)
             ax.barh(i, det['giorni_preingrasso'], left=det['fine_larvale_giorno'],
-                   color=colors_specie[i], alpha=0.6, edgecolor='black', linewidth=1,
+                   color=colors[i], alpha=0.6, edgecolor='black', linewidth=1.5,
                    label='Preingrasso' if i == 0 else '')
 
-            # Fase ingrasso
+            # Fase ingrasso (scura)
             ax.barh(i, det['giorni_ingrasso'], left=det['fine_preingrasso_giorno'],
-                   color=colors_specie[i], alpha=0.9, edgecolor='black', linewidth=1,
+                   color=colors[i], alpha=0.9, edgecolor='black', linewidth=1.5,
                    label='Ingrasso' if i == 0 else '')
 
-            # Etichetta specie
-            ax.text(det['inizio_giorno'] - 5, i, specie_nome,
-                   ha='right', va='center', fontweight='bold', fontsize=9)
+            # Nome specie
+            ax.text(-15, i, specie_nome,
+                   ha='right', va='center', fontsize=11, fontweight='bold')
 
         ax.set_yticks(y_pos)
         ax.set_yticklabels([''] * len(dettagli))
-        ax.set_xlabel('Giorni', fontweight='bold')
-        ax.set_title('📅 Timeline Produttiva (Metodo Sovrapposto)', fontweight='bold', pad=15)
-        ax.legend(loc='upper right', framealpha=0.9)
-        ax.grid(axis='x', alpha=0.3)
+        ax.set_xlabel('Timeline (giorni)', fontsize=11, fontweight='bold')
+        ax.set_title(f'METODO SOVRAPPOSTO (OTTIMALE)\nTempo totale: {risultati["tempo_totale"]} giorni',
+                    fontsize=13, fontweight='bold', pad=15,
+                    color=self.colors['sov'])
+        ax.legend(loc='upper right', framealpha=0.95, fontsize=10)
+        ax.grid(axis='x', alpha=0.3, linestyle='--')
+
+        # Bordo verde
+        for spine in ax.spines.values():
+            spine.set_edgecolor(self.colors['sov'])
+            spine.set_linewidth(3)
+
+    def _crea_distribuzione_specie(self, ax, risultati):
+        """
+        Crea un grafico a torta che mostra la distribuzione percentuale della
+        produzione in tonnellate tra le tre specie ittiche. Ogni spicchio ha
+        un colore distintivo (azzurro per spigola, arancione per orata, verde
+        per ombrina), è leggermente esploso per migliore leggibilità, e mostra
+        il nome della specie e la percentuale. Utile per capire quali specie
+        contribuiscono maggiormente alla produzione totale.
+        """
+        specie = []
+        tonnellate = []
+
+        for d in risultati['dettagli']:
+            nome = d['specie'].split('/')[0] if '/' in d['specie'] else d['specie']
+            specie.append(nome)
+            tonnellate.append(d['tonnellate_prodotte'])
+
+        colors = [self.colors['spigola'], self.colors['orata'], self.colors['ombrina']]
+
+        wedges, texts, autotexts = ax.pie(
+            tonnellate,
+            labels=specie,
+            autopct='%1.1f%%',
+            colors=colors,
+            startangle=90,
+            explode=(0.05, 0.05, 0.05),
+            textprops={'fontsize': 12, 'fontweight': 'bold'}
+        )
+
+        for autotext in autotexts:
+            autotext.set_color('white')
+            autotext.set_fontsize(13)
+            autotext.set_fontweight('bold')
+
+        ax.set_title('DISTRIBUZIONE PRODUZIONE\nper Specie (tonnellate)', fontsize=13, fontweight='bold', pad=15)
 
     def _crea_grafico_risorse(self, ax, risultati):
-        """Crea grafico delle risorse utilizzate"""
-        categorie = ['Vasche\nLarvali', 'Vasche\nPreingrasso', 'Gabbie\nIngrasso']
+        """
+        Visualizza le risorse utilizzate (vasche larvali, vasche preingrasso,
+        gabbie ingrasso) per ogni specie con un grafico a barre raggruppate.
+        Per ogni specie ci sono tre barre affiancate di colori diversi che
+        rappresentano i tre tipi di risorse. Questo permette di confrontare
+        rapidamente l'utilizzo delle risorse tra le diverse specie e capire
+        quali richiedono più infrastrutture in ciascuna fase produttiva.
+        """
+        specie_nomi = []
+        vasche_larvali = []
+        vasche_preingrasso = []
+        gabbie_ingrasso = []
 
-        # Somma le risorse per tutte le specie
-        vasche_larvali = [d['vasche_larvali'] for d in risultati['dettagli']]
-        vasche_preingrasso = [d['vasche_preingrasso'] for d in risultati['dettagli']]
-        gabbie_ingrasso = [d['gabbie_ingrasso'] for d in risultati['dettagli']]
+        for d in risultati['dettagli']:
+            nome = d['specie'].split('/')[0] if '/' in d['specie'] else d['specie']
+            specie_nomi.append(nome)
+            vasche_larvali.append(d['vasche_larvali'])
+            vasche_preingrasso.append(d['vasche_preingrasso'])
+            gabbie_ingrasso.append(d['gabbie_ingrasso'])
 
-        x = np.arange(len(categorie))
+        x = np.arange(len(specie_nomi))
         width = 0.25
 
-        colors_specie = [self.colors['spigola'], self.colors['orata'], self.colors['ombrina']]
-        specie_nomi = [d['specie'].split('/')[0] if '/' in d['specie'] else d['specie']
-                      for d in risultati['dettagli']]
+        ax.bar(x - width, vasche_larvali, width, label='Vasche Larvali',
+              color=self.colors['primary'], alpha=0.8, edgecolor='black', linewidth=1)
+        ax.bar(x, vasche_preingrasso, width, label='Vasche Preingrasso',
+              color=self.colors['warning'], alpha=0.8, edgecolor='black', linewidth=1)
+        ax.bar(x + width, gabbie_ingrasso, width, label='Gabbie Ingrasso',
+              color=self.colors['success'], alpha=0.8, edgecolor='black', linewidth=1)
 
-        # Crea barre affiancate
-        for i in range(len(risultati['dettagli'])):
-            valori = [vasche_larvali[i], vasche_preingrasso[i], gabbie_ingrasso[i]]
-            ax.bar(x + (i - 1) * width, valori, width, label=specie_nomi[i],
-                  color=colors_specie[i], alpha=0.8, edgecolor='black', linewidth=1)
-
-        ax.set_ylabel('Numero Unità', fontweight='bold')
-        ax.set_title('🏭 Risorse Utilizzate', fontweight='bold', pad=15)
+        ax.set_ylabel('Numero Unità', fontsize=11, fontweight='bold')
+        ax.set_xlabel('Specie', fontsize=11, fontweight='bold')
+        ax.set_title('RISORSE UTILIZZATE\nper Fase e Specie',
+                    fontsize=13, fontweight='bold', pad=15)
         ax.set_xticks(x)
-        ax.set_xticklabels(categorie, fontsize=8)
-        ax.legend(loc='upper left', fontsize=8)
-        ax.grid(axis='y', alpha=0.3)
+        ax.set_xticklabels(specie_nomi, fontsize=11, fontweight='bold')
+        ax.legend(fontsize=10, loc='upper left')
+        ax.grid(axis='y', alpha=0.3, linestyle='--')
 
-    def _crea_tabella_comparativa(self, ax, risultati_seq, risultati_sov):
-        """Crea tabella comparativa dettagliata"""
+    def _crea_tabella_riepilogo(self, ax, risultati_seq, risultati_sov):
+        """
+        Genera una tabella riepilogativa completa con 8 colonne che confronta
+        i due metodi produttivi per ogni specie. Include: nome specie, larve
+        seminate, pesci commerciali prodotti, tonnellate, tasso di sopravvivenza,
+        giorni metodo sequenziale, giorni metodo sovrapposto, e risparmio.
+        La colonna "RISPARMIO" è evidenziata in verde chiaro. L'ultima riga
+        mostra i totali aggregati. Header blu, riga totali verde, celle dati
+        alternate grigio/bianco per migliore leggibilità.
+        """
         ax.axis('off')
 
-        # Prepara dati
-        headers = ['Specie', 'Larve', 'Avannotti 2g', 'Pesci Comm.',
-                  'Tonnellate', 'Sopravv.%', 'Giorni Seq.', 'Giorni Sov.']
+        headers = ['SPECIE', 'LARVE', 'PESCI COMM.', 'TONNELLATE', 'SOPRAVV.%', 'GG SEQ.', 'GG SOV.', 'RISPARMIO']
 
         rows = []
         for i, det_sov in enumerate(risultati_sov['dettagli']):
             det_seq = risultati_seq['dettagli'][i]
-            specie_nome = det_sov['specie'].split('(')[0].strip()
+            nome = det_sov['specie'].split('(')[0].strip()
+
+            gg_seq = det_seq.get('giorni_totali', det_seq.get('fine_ingrasso_giorno', 0))
+            gg_sov = det_sov['fine_ingrasso_giorno']
+            risparmio = gg_seq - gg_sov
 
             row = [
-                specie_nome,
+                nome,
                 f"{det_sov['larve_seminate']:,}",
-                f"{det_sov['avannotti_2g']:,}",
                 f"{det_sov['pesci_commerciali']:,}",
-                f"{det_sov['tonnellate_prodotte']}",
+                f"{det_sov['tonnellate_prodotte']} t",
                 f"{det_sov['tasso_sopravvivenza_totale']}%",
-                f"{det_seq['giorni_totali'] if 'giorni_totali' in det_seq else det_seq['fine_ingrasso_giorno']}",
-                f"{det_sov['fine_ingrasso_giorno']}"
+                str(gg_seq),
+                str(gg_sov),
+                f"{risparmio} gg"
             ]
             rows.append(row)
 
-        # Aggiungi riga totali
+        # Riga totali
         totale_larve = sum(d['larve_seminate'] for d in risultati_sov['dettagli'])
         totale_pesci = sum(d['pesci_commerciali'] for d in risultati_sov['dettagli'])
         totale_tonn = sum(d['tonnellate_prodotte'] for d in risultati_sov['dettagli'])
+        risparmio_tot = risultati_seq['tempo_totale'] - risultati_sov['tempo_totale']
 
         rows.append([
             'TOTALE',
             f"{totale_larve:,}",
-            '-',
             f"{totale_pesci:,}",
-            f"{totale_tonn:.2f}",
+            f"{totale_tonn:.1f} t",
             f"{(totale_pesci/totale_larve*100):.1f}%",
-            f"{risultati_seq['tempo_totale']}",
-            f"{risultati_sov['tempo_totale']}"
+            str(risultati_seq['tempo_totale']),
+            str(risultati_sov['tempo_totale']),
+            f"{risparmio_tot} gg"
         ])
 
         # Crea tabella
-        table = ax.table(cellText=rows, colLabels=headers,
-                        cellLoc='center', loc='center',
-                        colWidths=[0.15, 0.12, 0.12, 0.12, 0.10, 0.10, 0.10, 0.10])
+        table = ax.table(
+            cellText=rows,
+            colLabels=headers,
+            cellLoc='center',
+            loc='center',
+            colWidths=[0.14, 0.12, 0.12, 0.11, 0.09, 0.09, 0.09, 0.11]
+        )
 
         table.auto_set_font_size(False)
-        table.set_fontsize(8)
-        table.scale(1, 2.5)
+        table.set_fontsize(11)
+        table.scale(1, 3)
 
         # Stile header
         for i in range(len(headers)):
             cell = table[(0, i)]
             cell.set_facecolor(self.colors['primary'])
-            cell.set_text_props(weight='bold', color='white')
+            cell.set_text_props(weight='bold', color='white', fontsize=12)
+            cell.set_edgecolor('white')
+            cell.set_linewidth(2)
 
         # Stile riga totali
         for i in range(len(headers)):
             cell = table[(len(rows), i)]
             cell.set_facecolor(self.colors['success'])
-            cell.set_text_props(weight='bold', color='white')
+            cell.set_text_props(weight='bold', color='white', fontsize=12)
+            cell.set_edgecolor('white')
+            cell.set_linewidth(2)
 
-        # Alterna colori righe
+        # Stile celle dati
         for i in range(1, len(rows)):
             for j in range(len(headers)):
                 cell = table[(i, j)]
                 if i % 2 == 0:
-                    cell.set_facecolor('#f0f0f0')
+                    cell.set_facecolor('#f3f4f6')
+                else:
+                    cell.set_facecolor('white')
+                cell.set_edgecolor('#d1d5db')
+                cell.set_linewidth(1)
 
-        ax.set_title('📊 Tabella Comparativa Dettagliata', fontweight='bold',
-                    fontsize=12, pad=20)
+                # Evidenzia colonna risparmio
+                if j == 7:
+                    cell.set_facecolor('#d1fae5')
 
-    def _crea_grafico_produzione_annuale(self, ax, risultati):
-        """Crea grafico produzione annuale vs target"""
-        tot_tonnellate = sum(d['tonnellate_prodotte'] for d in risultati['dettagli'])
-        cicli_anno = 365 / risultati['tempo_totale']
-        produzione_annua = tot_tonnellate * cicli_anno
-        target = self.config.capacita_produttiva_annua
-
-        categorie = ['Produzione\nStimata', 'Target\nAziendale']
-        valori = [produzione_annua, target]
-        colors = [self.colors['success'] if produzione_annua >= target else self.colors['warning'],
-                 self.colors['primary']]
-
-        bars = ax.bar(categorie, valori, color=colors, alpha=0.7, edgecolor='black', linewidth=2)
-
-        # Aggiungi valori
-        for bar in bars:
-            height = bar.get_height()
-            ax.text(bar.get_x() + bar.get_width()/2., height,
-                   f'{int(height)} t',
-                   ha='center', va='bottom', fontweight='bold', fontsize=11)
-
-        ax.set_ylabel('Tonnellate/Anno', fontweight='bold')
-        ax.set_title('📈 Produzione Annuale Stimata', fontweight='bold', pad=15)
-        ax.grid(axis='y', alpha=0.3)
-
-        # Percentuale raggiungimento
-        percentuale = (produzione_annua / target * 100)
-        ax.text(0.5, 0.95, f'Raggiungimento: {percentuale:.1f}%',
-               transform=ax.transAxes, ha='center', va='top',
-               bbox=dict(boxstyle='round', facecolor=colors[0], alpha=0.3),
-               fontweight='bold')
-
-        # Info cicli
-        ax.text(0.5, 0.85, f'Cicli/anno: {cicli_anno:.1f}',
-               transform=ax.transAxes, ha='center', va='top',
-               fontsize=9, style='italic')
-
-
-# ============================================================================
-# ESEMPIO DI UTILIZZO
-# ============================================================================
-
-def esempio_utilizzo():
-    """
-    Esempio di come utilizzare la classe ReportGeneratorGruppoDelPesce
-    """
-    from config import settings
-    from data_model.specie_ittica_model import SpecieIttica
-    from data_model.lotto_produzione_model import LottoProduzione
-
-    # Importa le funzioni di simulazione esistenti
-    # from tuo_modulo import (
-    #     ConfigurazioneGruppoDelPesce,
-    #     genera_lotti_casuali,
-    #     sequenza_produzione_completa_sequenziale,
-    #     sequenza_produzione_integrata_sovrapposta
-    # )
-
-    # 1. Configura l'impianto (come nel codice esistente)
-    # config = ConfigurazioneGruppoDelPesce()
-
-    # 2. Definisci specie e genera lotti (come nel codice esistente)
-    # specie_ittiche = [...]
-    # lotti = genera_lotti_casuali(specie_ittiche)
-
-    # 3. Esegui simulazioni (come nel codice esistente)
-    # risultati_seq = sequenza_produzione_completa_sequenziale(lotti, config)
-    # risultati_sov = sequenza_produzione_integrata_sovrapposta(lotti, config)
-
-    # 4. NUOVO: Genera report grafico invece di stampare
-    # report_generator = ReportGeneratorGruppoDelPesce(config)
-    # file_output = report_generator.genera_report_completo(
-    #     risultati_seq,
-    #     risultati_sov,
-    #     lotti,
-    #     nome_file="report_produzione.png"
-    # )
-
-    # print(f"✅ Report generato: {file_output}")
-
-    pass
-
-
-if __name__ == "__main__":
-    print("Classe ReportGeneratorGruppoDelPesce pronta all'uso!")
-    print("\nPer utilizzarla, sostituisci la chiamata a stampa_risultati() con:")
-    print("report_generator = ReportGeneratorGruppoDelPesce(config)")
-    print("report_generator.genera_report_completo(risultati_seq, risultati_sov, lotti)")
+        ax.set_title('TABELLA RIEPILOGO COMPARATIVO', fontsize=14, fontweight='bold', pad=20, y=0.98)
