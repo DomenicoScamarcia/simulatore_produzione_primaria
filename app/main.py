@@ -17,10 +17,11 @@ from utils.generazione_lotti import genera_lotti_casuali
 
 def sequenza_produzione_completa_sequenziale(lotti: List[LottoProduzione], config: ConfigurazioneGruppoDelPesce) -> Dict:
     """
-    SEQUENZA 1: Produzione completa sequenziale
-
-    Dalla larva alla taglia commerciale, completando una specie
-    prima di iniziare la successiva.
+    Simula il processo produttivo completando interamente un lotto alla volta.
+    Ogni specie attraversa tutte le fasi (larvale, preingrasso, ingrasso) prima
+    che inizi la lavorazione della specie successiva. Calcola vasche necessarie,
+    sopravvivenza in ogni fase, tempo totale e tonnellate prodotte per lotto.
+    Restituisce un dizionario con metodo, dettagli per specie e tempo totale accumulato.
     """
     risultati = {
         'metodo': 'Sequenziale (dalla nascita alla taglia commerciale)',
@@ -79,10 +80,11 @@ def sequenza_produzione_completa_sequenziale(lotti: List[LottoProduzione], confi
 
 def sequenza_produzione_integrata_sovrapposta(lotti: List[LottoProduzione], config: ConfigurazioneGruppoDelPesce) -> Dict:
     """
-    SEQUENZA 2: Produzione integrata con sovrapposizione
-
-    Gestione simultanea di più lotti in fasi diverse, ottimizzando
-    l'uso delle strutture dell'avannotteria e dei 6 impianti produttivi.
+    Simula una produzione sovrapposta dove più lotti vengono gestiti contemporaneamente.
+    Un nuovo lotto può iniziare quando il precedente libera le vasche larvali, permettendo
+    un uso più efficiente delle risorse. Traccia inizio/fine di ogni fase per ogni lotto
+    e calcola il tempo massimo complessivo invece della somma dei tempi. Ottimizza throughput
+    sfruttando la parallelizzazione delle fasi produttive tra i diversi lotti.
     """
     risultati = {
         'metodo': 'Integrata Sovrapposta (gestione multi-lotto simultanea)',
@@ -156,7 +158,12 @@ def sequenza_produzione_integrata_sovrapposta(lotti: List[LottoProduzione], conf
 # ============================================================================
 
 def stampa_risultati(risultati: Dict):
-    """Stampa i risultati della simulazione in modo leggibile"""
+    """
+    Formatta e stampa su console i risultati della simulazione in modo strutturato.
+    # Visualizza per ogni specie: numeri (larve, avannotti, pesci, tonnellate),
+    # risorse utilizzate (vasche e gabbie), tempi di ogni fase e performance complessive.
+    # Include anche totali aggregati di produzione e tempo complessivo del ciclo.
+    """
     print(f"\n{'='*80}")
     print(f"RISULTATI SIMULAZIONE - {risultati['metodo']}")
     print(f"{'='*80}")
@@ -203,7 +210,14 @@ def stampa_risultati(risultati: Dict):
 # ============================================================================
 
 def main():
-    """Funzione principale che esegue la simulazione"""
+    """
+    Punto di ingresso principale del programma. Configura l'ambiente di simulazione,
+    # definisce le tre specie ittiche (Spigola, Orata, Ombrina) con i loro parametri
+    # specifici, inizializza la configurazione dell'impianto del Gruppo Del Pesce,
+    # genera lotti casuali, esegue entrambe le simulazioni (sequenziale e sovrapposta),
+    # genera il report grafico PNG, e stampa il confronto dettagliato tra i metodi
+    # includendo analisi della produzione annuale e raggiungimento del target aziendale.
+    """
 
     print("\n" + "="*80)
     print(" SIMULAZIONE PRODUZIONE - GRUPPO DEL PESCE")
@@ -312,7 +326,7 @@ def main():
     differenza = risultati_seq['tempo_totale'] - risultati_sov['tempo_totale']
     if differenza > 0:
         percentuale = (differenza / risultati_seq['tempo_totale']) * 100
-        print(f"\n RISPARMIO con metodo integrato: {differenza} giorni ({percentuale:.1f}%)")
+        print(f"\n RISPARMIO con metodo integrato sovrapposto: {differenza} giorni ({percentuale:.1f}%)")
         print(f"   ✓ Ottimizzazione uso avannotteria")
         print(f"   ✓ Distribuzione efficiente su 6 impianti")
         print(f"   ✓ Maggiore flessibilità produttiva")
@@ -330,9 +344,13 @@ def main():
     percentuale_target = (produzione_annua / config.capacita_produttiva_annua) * 100
     print(f"   Raggiungimento target: {percentuale_target:.1f}%")
 
-    print("\n" + "="*80)
-    print(" 100% ITALIANO DALLA NASCITA - Filiera completamente integrata")
-    print("="*80 + "\n")
+    print("\n" + "=" * 80)
+    print(f"Report grafico completo salvato in: '{file_png}'.")
+    print(
+        "Il PNG contiene tutti i grafici per un approfondimento dettagliato: confronto tra i metodi, trend dei tassi di sopravvivenza per fase, produzione per specie e utilizzo delle risorse.")
+    print(f"Apri '{file_png}' per visualizzare le figure e i dettagli analitici.")
+    print("=" * 80 + "\n")
+
 
 # Esegui il programma
 if __name__ == "__main__":

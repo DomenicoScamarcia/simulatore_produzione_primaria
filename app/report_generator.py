@@ -2,6 +2,7 @@
 GENERATORE DI REPORT GRAFICI - GRUPPO DEL PESCE
 Classe per generare report visivi con grafici e tabelle in formato PNG
 """
+from pathlib import Path
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 from matplotlib.gridspec import GridSpec
@@ -17,10 +18,10 @@ class ReportGeneratorGruppoDelPesce:
 
     def __init__(self, config):
         """
-        Inizializza il generatore di report
-
-        Args:
-            config: Oggetto ConfigurazioneGruppoDelPesce
+        Inizializza il generatore di report configurando i colori per i grafici,
+        lo stile matplotlib (font, dimensioni testo, spessori), e disabilitando
+        i warning relativi ai glifi mancanti. Memorizza la configurazione
+        dell'impianto per calcoli successivi (es. capacità produttiva annua).
         """
         self.config = config
         self.colors = {
@@ -56,16 +57,15 @@ class ReportGeneratorGruppoDelPesce:
 
     def genera_report_completo(self, risultati_seq: Dict, risultati_sov: Dict, lotti: List, nome_file: str = None) -> str:
         """
-        Genera un report completo con layout pulito e ordinato
-
-        Args:
-            risultati_seq: Risultati simulazione sequenziale
-            risultati_sov: Risultati simulazione sovrapposta
-            lotti: Lista dei lotti simulati
-            nome_file: Nome del file di output (opzionale)
-
-        Returns:
-            str: Path del file PNG generato
+        Crea un report visivo completo in formato PNG con 7 sezioni:
+        1) KPI globali (larve, pesci, tonnellate, sopravvivenza, risparmio)
+        2) Confronto diretto tra metodo sequenziale e sovrapposto
+        3) Dettagli metodo sequenziale con tempi per specie
+        4) Dettagli metodo sovrapposto con timeline delle fasi
+        5) Distribuzione produzione per specie (grafico a torta)
+        6) Risorse utilizzate (vasche e gabbie per specie)
+        7) Tabella riepilogo comparativo con tutti i dati
+        Salva il file nella cartella "report" e restituisce il percorso assoluto.
         """
         if nome_file is None:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -76,17 +76,13 @@ class ReportGeneratorGruppoDelPesce:
         fig.patch.set_facecolor('white')
 
         # Titolo principale
-        fig.suptitle('REPORT SIMULAZIONE PRODUZIONE - GRUPPO DEL PESCE',
-                     fontsize=22, fontweight='bold', y=0.97)
+        fig.suptitle('REPORT SIMULAZIONE PRODUZIONE - GRUPPO DEL PESCE', fontsize=22, fontweight='bold', y=0.97)
 
         # Sottotitolo
-        fig.text(0.5, 0.945,
-                'Filiera integrata: dalla nascita alla taglia commerciale | Guidonia (RM)',
-                ha='center', fontsize=13, style='italic', color='#4b5563')
+        fig.text(0.5, 0.945, 'Filiera integrata: dalla nascita alla taglia commerciale | Guidonia (RM)', ha='center', fontsize=13, style='italic', color='#4b5563')
 
         # Crea griglia con più spazio
-        gs = GridSpec(5, 2, figure=fig, hspace=0.5, wspace=0.35,
-                     left=0.06, right=0.94, top=0.92, bottom=0.05)
+        gs = GridSpec(5, 2, figure=fig, hspace=0.5, wspace=0.35, left=0.06, right=0.94, top=0.92, bottom=0.05)
 
         # 1. KPI GLOBALI (riga 1, colonne 1-2)
         ax1 = fig.add_subplot(gs[0, :])
@@ -116,14 +112,29 @@ class ReportGeneratorGruppoDelPesce:
         ax7 = fig.add_subplot(gs[4, :])
         self._crea_tabella_riepilogo(ax7, risultati_seq, risultati_sov)
 
-        # Salva figura
-        plt.savefig(nome_file, dpi=300, bbox_inches='tight', facecolor='white', edgecolor='none')
+        # --- Salva figura nella cartella "report" situata allo stesso livello di "app" ---
+        # Cartella report: ../report relative al file current (app/report_generator.py)
+        report_dir = Path(__file__).resolve().parent.parent / "report"
+        report_dir.mkdir(parents=True, exist_ok=True)
+
+        # Assicura che il nome file non contenga slash imprevisti
+        nome_file = Path(nome_file).name
+
+        file_path = report_dir / nome_file
+        plt.savefig(file_path, dpi=300, bbox_inches='tight', facecolor='white', edgecolor='none')
         plt.close()
 
-        return nome_file
+        # Ritorna il percorso assoluto del file come stringa
+        return str(file_path)
 
     def _crea_kpi_globali(self, ax, lotti, risultati_seq, risultati_sov):
-        """KPI globali in alto"""
+        """
+        Crea una dashboard con 5 KPI principali visualizzati come card colorate:
+        larve seminate, pesci prodotti, tonnellate, tasso di sopravvivenza totale
+        e risparmio di tempo tra i due metodi. Ogni card ha un colore distintivo,
+        un'etichetta in alto e il valore numerico grande al centro. Le card sono
+        distribuite orizzontalmente nella parte superiore del report.
+        """
         ax.axis('off')
         ax.set_xlim(0, 1)
         ax.set_ylim(0, 1)
@@ -177,7 +188,14 @@ class ReportGeneratorGruppoDelPesce:
                    transform=ax.transAxes)
 
     def _crea_confronto_principale(self, ax, risultati_seq, risultati_sov):
-        """Confronto visivo chiaro tra i due metodi"""
+        """
+        Crea il grafico di confronto principale con due barre orizzontali grandi
+        che rappresentano i tempi totali dei due metodi produttivi. Il metodo
+        sequenziale è in rosso (sopra), il metodo sovrapposto in verde (sotto).
+        Include etichette sui lati, valori sui centri delle barre, e una freccia
+        bidirezionale centrale che evidenzia il risparmio in giorni e percentuale.
+        Questo grafico è il punto focale del report per il confronto immediato.
+        """
         ax.set_xlim(0, max(risultati_seq['tempo_totale'], risultati_sov['tempo_totale']) * 1.2)
         ax.set_ylim(-0.5, 1.5)
 
@@ -222,21 +240,18 @@ class ReportGeneratorGruppoDelPesce:
         ax.annotate('',
                    xy=(risultati_sov['tempo_totale'], 0.5),
                    xytext=(risultati_seq['tempo_totale'], 0.5),
-                   arrowprops=dict(arrowstyle='<->', color=self.colors['sov'],
-                                 lw=3, mutation_scale=20))
+                   arrowprops=dict(arrowstyle='<->', color=self.colors['sov'], lw=3, mutation_scale=20))
 
         ax.text((risultati_seq['tempo_totale'] + risultati_sov['tempo_totale'])/2, 0.6,
                f'RISPARMIO: {risparmio} giorni ({percentuale:.1f}%)',
                ha='center', va='bottom', fontsize=13, fontweight='bold',
                color=self.colors['sov'],
-               bbox=dict(boxstyle='round,pad=0.5', facecolor='white',
-                        edgecolor=self.colors['sov'], linewidth=2))
+               bbox=dict(boxstyle='round,pad=0.5', facecolor='white', edgecolor=self.colors['sov'], linewidth=2))
 
         ax.set_xlabel('TEMPO TOTALE DI PRODUZIONE (giorni)', fontsize=13, fontweight='bold')
         ax.set_yticks([])
         ax.grid(axis='x', alpha=0.3, linestyle='--')
-        ax.set_title('CONFRONTO TEMPI PRODUTTIVI: SEQUENZIALE VS SOVRAPPOSTO',
-                    fontsize=15, fontweight='bold', pad=20)
+        ax.set_title('CONFRONTO TEMPI PRODUTTIVI: SEQUENZIALE VS SOVRAPPOSTO', fontsize=15, fontweight='bold', pad=20)
 
         # Bordo
         for spine in ax.spines.values():
@@ -244,7 +259,14 @@ class ReportGeneratorGruppoDelPesce:
             spine.set_linewidth(2)
 
     def _crea_dettagli_sequenziale(self, ax, risultati):
-        """Dettagli del metodo sequenziale"""
+        """
+        Visualizza i dettagli del metodo sequenziale con un grafico a barre
+        orizzontali che mostra i giorni totali necessari per ogni specie
+        (Spigola, Orata, Ombrina). Ogni barra ha un colore distintivo per specie,
+        i valori sono mostrati a destra delle barre, e il bordo del grafico è
+        rosso per identificarlo come relativo al metodo sequenziale. Include
+        il tempo totale nel titolo.
+        """
         dettagli = risultati['dettagli']
 
         specie_nomi = []
@@ -285,7 +307,14 @@ class ReportGeneratorGruppoDelPesce:
             spine.set_linewidth=3
 
     def _crea_dettagli_sovrapposto(self, ax, risultati):
-        """Dettagli del metodo sovrapposto con timeline"""
+        """
+        Crea una timeline Gantt che visualizza la sovrapposizione temporale
+        dei lotti nel metodo sovrapposto. Per ogni specie mostra tre segmenti
+        di barra con opacità crescente che rappresentano le tre fasi produttive:
+        larvale (chiara), preingrasso (media), ingrasso (scura). La timeline
+        permette di vedere come i lotti si sovrappongono nel tempo, ottimizzando
+        l'uso delle risorse. Il bordo verde identifica il metodo sovrapposto.
+        """
         dettagli = risultati['dettagli']
 
         y_pos = np.arange(len(dettagli))
@@ -328,7 +357,14 @@ class ReportGeneratorGruppoDelPesce:
             spine.set_linewidth(3)
 
     def _crea_distribuzione_specie(self, ax, risultati):
-        """Grafico a torta chiaro"""
+        """
+        Crea un grafico a torta che mostra la distribuzione percentuale della
+        produzione in tonnellate tra le tre specie ittiche. Ogni spicchio ha
+        un colore distintivo (azzurro per spigola, arancione per orata, verde
+        per ombrina), è leggermente esploso per migliore leggibilità, e mostra
+        il nome della specie e la percentuale. Utile per capire quali specie
+        contribuiscono maggiormente alla produzione totale.
+        """
         specie = []
         tonnellate = []
 
@@ -357,7 +393,14 @@ class ReportGeneratorGruppoDelPesce:
         ax.set_title('DISTRIBUZIONE PRODUZIONE\nper Specie (tonnellate)', fontsize=13, fontweight='bold', pad=15)
 
     def _crea_grafico_risorse(self, ax, risultati):
-        """Risorse utilizzate - chiaro e leggibile"""
+        """
+        Visualizza le risorse utilizzate (vasche larvali, vasche preingrasso,
+        gabbie ingrasso) per ogni specie con un grafico a barre raggruppate.
+        Per ogni specie ci sono tre barre affiancate di colori diversi che
+        rappresentano i tre tipi di risorse. Questo permette di confrontare
+        rapidamente l'utilizzo delle risorse tra le diverse specie e capire
+        quali richiedono più infrastrutture in ciascuna fase produttiva.
+        """
         specie_nomi = []
         vasche_larvali = []
         vasche_preingrasso = []
@@ -390,7 +433,15 @@ class ReportGeneratorGruppoDelPesce:
         ax.grid(axis='y', alpha=0.3, linestyle='--')
 
     def _crea_tabella_riepilogo(self, ax, risultati_seq, risultati_sov):
-        """Tabella riepilogo chiara e leggibile"""
+        """
+        Genera una tabella riepilogativa completa con 8 colonne che confronta
+        i due metodi produttivi per ogni specie. Include: nome specie, larve
+        seminate, pesci commerciali prodotti, tonnellate, tasso di sopravvivenza,
+        giorni metodo sequenziale, giorni metodo sovrapposto, e risparmio.
+        La colonna "RISPARMIO" è evidenziata in verde chiaro. L'ultima riga
+        mostra i totali aggregati. Header blu, riga totali verde, celle dati
+        alternate grigio/bianco per migliore leggibilità.
+        """
         ax.axis('off')
 
         headers = ['SPECIE', 'LARVE', 'PESCI COMM.', 'TONNELLATE', 'SOPRAVV.%', 'GG SEQ.', 'GG SOV.', 'RISPARMIO']
